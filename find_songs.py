@@ -14,6 +14,20 @@ def find_average_diff(spec_a, spec_b):
     return average_diff
 
 
+def find_sim(template, section):
+    # Scale spectrogram so max values are 1
+    max_temp = np.max(template)
+    template = np.divide(template, max_temp)
+    max_sec = np.max(section)
+    section = np.divide(section, max_sec)
+    # Find differences
+    diff = abs(section - template)
+    # Subtract from array of 1's to get similarities
+    sim = np.ones(template.shape) - diff
+    # Return average similarity
+    return sum(sum(sim)) / (len(sim) * len(sim[0]))
+
+
 # Get user parameters
 file_dir = input("Enter the relative path of the file for searching: ")
 
@@ -63,13 +77,16 @@ probabilities = [[] for i in range(0, 23)]
 song_spec_len = len(songs_specs[0][0])
 print(np_spectrogram.shape)
 for starting_point in range(0, len(np_spectrogram) - song_spec_len, 16):
-    # Find average difference for each song
+    # Find average similarity to each song
     comparison_spec = np_spectrogram[starting_point:starting_point + song_spec_len]
     for song_type in range(0, 23):
         song_spec = songs_specs[song_type][0]
-        avg_diff = find_average_diff(song_spec, comparison_spec)
-        # Add "likelihood" of song happening at this instance
-        probabilities[song_type].append(max(0, 300 - avg_diff))
+        similarity = find_sim(song_spec, comparison_spec)
+        # Add similarity of audio to the song at this instance
+        if similarity > 0.85:
+            probabilities[song_type].append(similarity)
+        else:
+            probabilities[song_type].append(0)
 # Save probabilities
 np.save(np_dir.replace('data', 'matches'), probabilities)
 print("Saved probabilities")

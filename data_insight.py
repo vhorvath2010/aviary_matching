@@ -14,6 +14,20 @@ def find_average_diff(spec_a, spec_b):
     return average_diff
 
 
+def find_sim(template, section):
+    # Scale spectrogram so max values are 1
+    max_temp = np.max(template)
+    template = np.divide(template, max_temp)
+    max_sec = np.max(section)
+    section = np.divide(section, max_sec)
+    # Find differences
+    diff = abs(section - template)
+    # Subtract from array of 1's to get similarities
+    curr_sim = np.ones(template.shape) - diff
+    # Return average similarity
+    return sum(sum(curr_sim)) / (len(curr_sim) * len(curr_sim[0]))
+
+
 # Load spectrogram dictionary
 labels = [i for i in range(23)]
 specs_dict = {}
@@ -29,10 +43,12 @@ for label in labels:
 
 # Compare similarities between samples of same song (simple previous, next, approach)
 for label in specs_dict.keys():
-    print("Computing differences for", label)
+    print("Computing similarities for", label)
     specs = specs_dict[label]
-    avg_diffs = []
+    sims = []
     for i in range(len(specs) - 1):
-        avg_diff = find_average_diff(specs[i], specs[i + 1])
-        avg_diffs.append(avg_diff)
-    print("Average difference", sum(avg_diffs) / len(avg_diffs))
+        sim = find_sim(specs[i], specs[i + 1])
+        sims.append(sim)
+    print("Average similarity", sum(sims) / len(sims))
+
+print("Sim for random two", find_sim(specs_dict[16][4], specs_dict[5][7]))

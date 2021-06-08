@@ -23,7 +23,7 @@ with open('data/grouped_audio_annotations.csv') as csvfile:
         if song >= songs_to_plot:
             break
 
-plt.pcolormesh([i for i in range(songs_to_plot)], [i for i in range(23)], probabilities, shading='nearest')
+plt.pcolormesh([i for i in range(songs_to_plot)], [i for i in range(23)], probabilities, shading='auto')
 plt.ylabel('Song Type')
 plt.xlabel('Song')
 plt.show()
