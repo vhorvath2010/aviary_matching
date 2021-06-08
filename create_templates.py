@@ -12,7 +12,6 @@ mono_samples = np.array(stereo_samples)
 mono_samples = mono_samples.transpose()
 mono_samples = ((mono_samples[0] + mono_samples[1])/2)
 
-
 # Create spectrogram for each label
 
 with open('data/grouped_audio_annotations.csv') as csvfile:
@@ -34,7 +33,12 @@ with open('data/grouped_audio_annotations.csv') as csvfile:
         frequencies, times, spectrogram = signal.spectrogram(mono_samples[start:stop], sr, nperseg=512, noverlap=384)
         # Save spectrogram to np array
         np_spectrogram = np.array(spectrogram)
+        np_spectrogram = np.log(np_spectrogram)
+        np_spectrogram = np.clip(np_spectrogram, -2, 3)
+        # Cut off low frequencies (under 1k) (first 10) (DID end up seeing less difference)
+        np_spectrogram = np.delete(np_spectrogram, slice(1, 10), 0)
         np_frequencies = np.array(frequencies)
+        np_frequencies = np.delete(np_frequencies, slice(1, 10), 0)
         np_times = np.array(times)
         # Create directory if needed and save spec data
         label_path = os.path.join('specs', label)
@@ -42,8 +46,9 @@ with open('data/grouped_audio_annotations.csv') as csvfile:
             os.mkdir(label_path)
         # Turn to True to see graphed spectrograms
         if False:
-            plt.pcolormesh(times, frequencies, spectrogram, shading='gouraud')
+            plt.pcolormesh(times, np_frequencies, np_spectrogram, shading='gouraud')
             plt.ylabel('Frequency [Hz]')
             plt.xlabel('Time [sec]')
             plt.show()
-        np.save(os.path.join(label_path, str(spec)), np_spectrogram)
+        # Save transposed spectrogram so time is on the X
+        np.save(os.path.join(label_path, str(spec)), np_spectrogram.transpose())

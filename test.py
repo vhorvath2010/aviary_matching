@@ -1,6 +1,15 @@
 import numpy as np
 
-a = np.array([[1, 2, 3], [4, 5, 6]])
-b = np.array([[1, 2, 3], [4, 5, 6]])
-c = a - b
-print(c)
+
+def find_sim(template, section):
+    perc_diff = abs(section - template)
+    ones = np.ones(template.shape)
+    sim = ones - perc_diff
+    print(sim)
+    total_sim = sum(sum(sim))
+    return total_sim/len(sim)
+
+
+a = np.asarray([[1, 0, 0], [0, 0, 1], [1, 0, 0]])
+b = np.asarray([[.9, 0.1, 0], [0.1, 0.15, 1], [.95, .1, 0]])
+print(find_sim(a, b))

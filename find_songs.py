@@ -1,6 +1,5 @@
+import math
 import os
-import wave
-
 import numpy as np
 from scipy import signal
 from scipy.io import wavfile
@@ -17,39 +16,60 @@ def find_average_diff(spec_a, spec_b):
 
 # Get user parameters
 file_dir = input("Enter the relative path of the file for searching: ")
-song_type = input("Enter the song type to search for: ")
-
-# Load song templates
-spec_dir = 'specs/' + song_type
-specs = []
-print("Loading spectrograms for", song_type)
-for filename in os.listdir(spec_dir):
-    path = spec_dir + "/" + filename
-    specs.append(np.load(path))
-print("Loaded", len(specs), "spectrograms")
 
 # Load audio data for comparison
 print("Loading audio data for searching")
 sr, stereo_samples = wavfile.read(file_dir)
 mono_samples = np.array(stereo_samples)
 mono_samples = mono_samples.transpose()
-mono_samples = ((mono_samples[0] + mono_samples[1])/2)
+mono_samples = ((mono_samples[0] + mono_samples[1]) / 2)
 audio_len = len(mono_samples) / sr
-# Create spectrogram of the audio data, and flip so x axis is time
-frequencies, times, spectrogram = signal.spectrogram(mono_samples, sr, nperseg=512, noverlap=384)
-np_spectrogram = np.array(spectrogram)
-np_spectrogram = np_spectrogram.transpose()
+# Create spectrogram, or load if already created for this audio file
+np_dir = file_dir.replace('.wav', '.npy')
+if not os.path.exists(np_dir):
+    frequencies, times, spectrogram = signal.spectrogram(mono_samples, sr, nperseg=512, noverlap=384)
+    np_spectrogram = np.array(spectrogram)
+    np_spectrogram = np.log(np_spectrogram)
+    np_spectrogram = np.clip(np_spectrogram, -2, 3)
+    np_spectrogram = np.flipud(np_spectrogram)
+    # Cut off low frequencies (under 1k) (first 10)
+    np_spectrogram = np.delete(np_spectrogram, slice(1, 10), 0)
+    np_frequencies = np.array(frequencies)
+    np_frequencies = np.delete(np_frequencies, slice(1, 10), 0)
+    # Transpose so X axis is time
+    np_spectrogram = np_spectrogram.transpose()
+else:
+    np_spectrogram = np.load(np_dir)
 print("Audio data loaded")
+np.save(np_dir, np_spectrogram)
 
-# Search for matches
-print("Searching for segments of song", song_type, "in audio")
-template_spec = specs[0]
-template_spec = template_spec.transpose()
-matches = []
-for starting_point in range(0, len(np_spectrogram) - len(template_spec), 16):
-    comparison_spec = np_spectrogram[starting_point:starting_point + len(template_spec)]
-    avg_diff = find_average_diff(template_spec, comparison_spec)
-    if avg_diff <= 125:
-        starting_time = starting_point / len(np_spectrogram) * audio_len
-        print("Match found at", starting_time, "seconds")
-        matches.append(starting_time * sr)
+# Load song_type data
+songs_specs = []
+for song_type in range(0, 23):
+    # Load song templates
+    spec_dir = 'specs/' + str(song_type)
+    specs = []
+    print("Loading spectrograms for", song_type)
+    for filename in os.listdir(spec_dir):
+        path = spec_dir + "/" + filename
+        specs.append(np.load(path))
+    print("Loaded", len(specs), "spectrograms")
+    songs_specs.append(specs)
+
+# Iterate through entire spectrogram, creating array of similarities
+print("Generating matches map for audio data based on songs")
+probabilities = [[] for i in range(0, 23)]
+# This represents the likelihood (value) of a segment being of a certain song type (y) at a given time (x)
+song_spec_len = len(songs_specs[0][0])
+print(np_spectrogram.shape)
+for starting_point in range(0, len(np_spectrogram) - song_spec_len, 16):
+    # Find average difference for each song
+    comparison_spec = np_spectrogram[starting_point:starting_point + song_spec_len]
+    for song_type in range(0, 23):
+        song_spec = songs_specs[song_type][0]
+        avg_diff = find_average_diff(song_spec, comparison_spec)
+        # Add "likelihood" of song happening at this instance
+        probabilities[song_type].append(max(0, 300 - avg_diff))
+# Save probabilities
+np.save(np_dir.replace('data', 'matches'), probabilities)
+print("Saved probabilities")
