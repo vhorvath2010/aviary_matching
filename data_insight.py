@@ -2,6 +2,14 @@ import os
 import numpy as np
 
 
+def find_mask_sim(template, section):
+    # Create masks
+    t_mask = template > 0
+    s_mask = section > 0
+    # Return ratio of overlapping segments
+    return sum(sum(np.logical_and(t_mask, s_mask))) / sum(sum(t_mask))
+
+
 def find_average_diff(spec_a, spec_b):
     diff = abs(spec_a - spec_b)
     # Try returning raw diff
@@ -47,8 +55,8 @@ for label in specs_dict.keys():
     specs = specs_dict[label]
     sims = []
     for i in range(len(specs) - 1):
-        sim = find_sim(specs[i], specs[i + 1])
+        sim = find_mask_sim(specs[i], specs[i + 1])
         sims.append(sim)
     print("Average similarity", sum(sims) / len(sims))
 
-print("Sim for random two", find_sim(specs_dict[16][4], specs_dict[5][7]))
+print("Sim for random two", find_sim(specs_dict[7][4], specs_dict[3][7]))

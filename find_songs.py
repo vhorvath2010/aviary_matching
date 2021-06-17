@@ -5,6 +5,14 @@ from scipy import signal
 from scipy.io import wavfile
 
 
+def find_mask_sim(template, section):
+    # Create masks
+    t_mask = template > 0
+    s_mask = section > 0
+    # Return ratio of overlapping segments
+    return sum(sum(np.logical_and(t_mask, s_mask))) / sum(sum(t_mask))
+
+
 def find_average_diff(spec_a, spec_b):
     diff = abs(spec_a - spec_b)
     avg = (spec_a + spec_b) / 2
@@ -81,12 +89,9 @@ for starting_point in range(0, len(np_spectrogram) - song_spec_len, 16):
     comparison_spec = np_spectrogram[starting_point:starting_point + song_spec_len]
     for song_type in range(0, 23):
         song_spec = songs_specs[song_type][0]
-        similarity = find_sim(song_spec, comparison_spec)
+        similarity = find_mask_sim(song_spec, comparison_spec)
         # Add similarity of audio to the song at this instance
-        if similarity > 0.85:
-            probabilities[song_type].append(similarity)
-        else:
-            probabilities[song_type].append(0)
+        probabilities[song_type].append(similarity)
 # Save probabilities
 np.save(np_dir.replace('data', 'matches'), probabilities)
 print("Saved probabilities")
