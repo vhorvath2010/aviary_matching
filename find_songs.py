@@ -1,23 +1,26 @@
-import math
+import time
 import os
 import numpy as np
 from scipy import signal
 from scipy.io import wavfile
+from scipy import ndimage
 
 
 def find_mask_sim(template, section):
     # Create masks
-    t_mask = template > 0
-    s_mask = section > 0
+    t_mask = np.greater(template, 0)
+    s_mask = np.greater(section, 0)
+    # Dilate template mask
+    t_mask = ndimage.binary_dilation(t_mask)
     # Return ratio of overlapping segments
-    return sum(sum(np.logical_and(t_mask, s_mask))) / sum(sum(t_mask))
+    return np.sum(np.logical_and(t_mask, s_mask)) / t_mask.sum()
 
 
 def find_average_diff(spec_a, spec_b):
-    diff = abs(spec_a - spec_b)
+    diff = np.abs(spec_a - spec_b)
     avg = (spec_a + spec_b) / 2
-    perc_diff = 100 * abs(diff / avg)
-    total_diff = sum(sum(perc_diff))
+    perc_diff = np.multiply(np.abs(diff / avg), 100)
+    total_diff = np.sum(perc_diff)
     average_diff = total_diff / (len(diff) * len(diff[0]))
     return average_diff
 
@@ -84,7 +87,7 @@ probabilities = [[] for i in range(0, 23)]
 # This represents the likelihood (value) of a segment being of a certain song type (y) at a given time (x)
 song_spec_len = len(songs_specs[0][0])
 print(np_spectrogram.shape)
-for starting_point in range(0, len(np_spectrogram) - song_spec_len, 16):
+for starting_point in range(0, 24000, 4):
     # Find average similarity to each song
     comparison_spec = np_spectrogram[starting_point:starting_point + song_spec_len]
     for song_type in range(0, 23):

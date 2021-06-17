@@ -1,13 +1,16 @@
 import os
 import numpy as np
+from scipy import ndimage
 
 
 def find_mask_sim(template, section):
     # Create masks
     t_mask = template > 0
     s_mask = section > 0
+    # Dilate template mask
+    t_mask = ndimage.binary_dilation(t_mask)
     # Return ratio of overlapping segments
-    return sum(sum(np.logical_and(t_mask, s_mask))) / sum(sum(t_mask))
+    return np.logical_and(t_mask, s_mask).sum() / t_mask.sum()
 
 
 def find_average_diff(spec_a, spec_b):
@@ -59,4 +62,4 @@ for label in specs_dict.keys():
         sims.append(sim)
     print("Average similarity", sum(sims) / len(sims))
 
-print("Sim for random two", find_sim(specs_dict[7][4], specs_dict[3][7]))
+print("Sim for random two", find_mask_sim(specs_dict[12][15], specs_dict[7][4]))
